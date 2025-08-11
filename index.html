@@ -718,6 +718,17 @@
 @media (max-width: 640px){
   .gift-grid-3{ grid-template-columns: repeat(3, 1fr); gap: 12px; }
 }
+  /* ใช้เฉพาะอุปกรณ์ pointer แบบหยาบ (มือถือ/แท็บเล็ต) */
+@media (pointer: coarse){
+  .puzzle-grid img{
+    -webkit-user-drag: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+}
+
 
 .gift-card{
   position: relative;
@@ -1284,6 +1295,7 @@
   text-shadow: 0 2px 0 rgba(255,255,255,.9);
   font-size: 2.4rem;              /* อ่านง่ายบนมือถือ */
   letter-spacing: .3px;
+  position: relative;
 }
 
 /* เส้นริบบิ้นใต้หัวข้อแถวล่าง */
@@ -1422,7 +1434,7 @@
   </style>
 </head>
 <body>
-    <div class="hero-card"id="mainPage">
+    <div class="hero-card" id="mainPage">
   <img src="assets/images/hero.jpg" alt="My Love" class="photo hero-photo" />
 
     
@@ -1612,13 +1624,13 @@
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
 
-let isMusicPlaying = true;
+let isMusicPlaying = false;
 const toggleMusicBtn = document.getElementById("toggleMusicBtn");
 
 toggleMusicBtn.addEventListener("click", async () => {
   if (isMusicPlaying) {
     bgMusic.pause();
-    toggleMusicBtn.textContent = "🔇";
+    toggleMusicBtn.textContent = "🔇"; // เริ่มแบบเงียบ
   } else {
     try { await bgMusic.play(); toggleMusicBtn.textContent = "🔈"; } catch(e) {}
   }
@@ -1790,6 +1802,26 @@ function startMemoryPuzzle() {
 
   const PREVIEW_MAX = 2; // กดได้สูงสุด 3 ครั้งต่อเกม
 
+  function isTouchLike() {
+  return (window.matchMedia?.('(pointer: coarse)').matches) ||
+         ('ontouchstart' in window) ||
+         (navigator.maxTouchPoints > 0);
+}
+
+  
+
+  function enableNativeDnDOnce(container){
+  if (container.dataset.hasDnd === '1') return;
+  container.dataset.hasDnd = '1';
+  enableDragAndDrop(container); // ← ใช้ฟังก์ชัน drag&drop เดิมของคุณได้เลย
+}
+  function enableTouchSwapOnce(container){
+  if (container.dataset.hasTouchSwap === '1') return;
+  container.dataset.hasTouchSwap = '1';
+  enableTouchSwapTouch(container);
+}
+  
+
   // ✅ Memory Puzzle
   function loadPuzzleGame() {
   // โครง UI น่ารัก
@@ -1863,23 +1895,33 @@ pGrid.addEventListener("gesturestart", e => e.preventDefault());
   shuffleArray(pieces);
   pieces.forEach(p => pGrid.appendChild(p));
 
-  // เปิด Drag & Drop
-  enableDragAndDrop(pGrid);
-  enableTouchSwap(pGrid);
+  // เลือกโหมดแบบมีเงื่อนไข
+bindPuzzleInteractions(pGrid);
 
-  // ปุ่ม: สับใหม่
-  document.getElementById("btnShuffle").addEventListener("click", () => {
-    const all = [...pGrid.children];
-    shuffleArray(all);
-    all.forEach(n => pGrid.appendChild(n));
-    status.textContent = "สลับใหม่แล้ว ลองอีกทีน๊า~ ✨";
-    pCard.classList.remove("shake","celebrate");
+// …และในปุ่มสับใหม่ ให้เรียกย้ำเพื่อผูกตามโหมดปัจจุบันทุกครั้ง
+document.getElementById("btnShuffle").addEventListener("click", () => {
+  const all = [...pGrid.children];
+  shuffleArray(all);
+  all.forEach(n => pGrid.appendChild(n));
+  status.textContent = "สลับใหม่แล้ว ลองอีกทีน๊า~ ✨";
+  pCard.classList.remove("shake","celebrate");
+  bindPuzzleInteractions(pGrid);   // ⬅ สำคัญ
+});
+    function bindPuzzleInteractions(container) {
+  const touch = isTouchLike();
 
-    // ▼ ถ้าต้องการรีเซ็ตโควตาเมื่อสับใหม่ ให้ uncomment 3 บรรทัดนี้
-    // previewCount = 0;
-    // btnPreview.disabled = false;
-    // btnPreview.textContent = `ดูตัวอย่าง 🖼 (เหลือ ${PREVIEW_MAX})`;
+  // ตั้งค่า draggable เฉพาะตามโหมด
+  container.querySelectorAll('img').forEach(img => {
+    img.draggable = !touch;  // touch=false → ปิด drag; desktop=true → เปิด drag
   });
+
+  if (touch) {
+    enableTouchSwapOnce(container);
+  } else {
+    enableNativeDnDOnce(container); // ใช้ drag&drop เดิมบนเดสก์ท็อป
+  }
+}
+
 
   // ปุ่ม: ดูตัวอย่างภาพ (จำกัดจำนวนครั้ง)
   btnPreview.addEventListener("click", () => {
@@ -1935,6 +1977,34 @@ pGrid.addEventListener("gesturestart", e => e.preventDefault());
   document.body.appendChild(puzzlePage);
   puzzlePage.style.display = "flex";
 }
+  function enableTouchSwapTouch(puzzleContainer){
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!isTouch) return;
+  let first = null;
+  puzzleContainer.querySelectorAll('.puzzle-piece').forEach(tile => {
+    tile.addEventListener('touchstart', onTouchStart, {passive:false});
+  });
+  function onTouchStart(e){
+    e.preventDefault();
+    const tile = e.currentTarget;
+    if (!first){ first = tile; tile.classList.add('pz-selected'); return; }
+    if (first === tile){ tile.classList.remove('pz-selected'); first = null; return; }
+    swapDomNodes(first, tile);
+    first.classList.remove('pz-selected');
+    first = null;
+  }
+}
+
+// สลับ DOM โดยไม่ต้อง clone (รักษาโหนด/ลิสต์เนอร์ที่อยู่บน container)
+function swapNodes(a, b){
+  const aPlaceholder = document.createElement('span');
+  const bPlaceholder = document.createElement('span');
+  a.replaceWith(aPlaceholder);
+  b.replaceWith(bPlaceholder);
+  aPlaceholder.replaceWith(b);
+  bPlaceholder.replaceWith(a);
+}
+
 
 
 function enableDragAndDrop(puzzleContainer) {
@@ -1962,15 +2032,9 @@ function enableDragAndDrop(puzzleContainer) {
 
   puzzleContainer.addEventListener("drop", (e) => {
     if (e.target.tagName === "IMG" && draggedItem && draggedItem !== e.target) {
-      const draggedClone = draggedItem.cloneNode(true);
-      const targetClone = e.target.cloneNode(true);
+      swapDomNodes(draggedItem, e.target);
+  draggedItem = null;
 
-      puzzleContainer.replaceChild(draggedClone, e.target);
-      puzzleContainer.replaceChild(targetClone, draggedItem);
-
-      enableDragAndDrop(puzzleContainer); // re-enable after replacement
-      enableTouchSwap(puzzleContainer);  // << re-bind สำหรับ iOS ด้วย
-      enableTouchSwap(pGrid);            // << เผื่อกรณี listener หลุด
     }
   });
 }
@@ -2635,6 +2699,14 @@ if (saveBtn) saveBtn.addEventListener('click', saveCardAsImage);
   if (btnClose) btnClose.onclick = window.closeGiftCard;
 })();
 
+  const sub = document.querySelector('.puzzle-sub');
+if (sub) {
+  sub.textContent = isTouchLike()
+    ? 'แตะชิ้นที่ 1 แล้วแตะชิ้นที่ 2 เพื่อสลับ ให้ถูกต้องทั้ง 9 ช่อง'
+    : 'กดค้างเพื่อลาก/วาง ชิ้นส่วนให้ถูกต้องทั้ง 9 ช่อง';
+}
+
+
 // ===== Ultra-low-latency UI click sound (Web Audio) =====
 let audioCtx;
 
@@ -2699,4 +2771,5 @@ document.addEventListener('mousedown', unlockAndPrimeOnce, true);
 
 </body>
 </html>
+
 
