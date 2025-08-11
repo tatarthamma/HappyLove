@@ -94,7 +94,15 @@
   margin-bottom: 16px;
 }
 
-#puzzlePage { width: 100%; }
+#puzzlePage{
+  display: grid !important;
+  place-items: center;                   /* กลางทั้งสองแกน */
+  width: 100%;
+  min-height: 100vh;                     /* รองรับ Safari เก่า */
+  min-height: 100dvh;                    /* มือถือรุ่นใหม่ */
+  padding: 16px;
+  box-sizing: border-box;
+}
 
 
 
@@ -526,15 +534,14 @@
 
 .puzzle-card{
   position: relative;
-  max-width: min(95vw, 420px);
+  max-width: 420px;
   width: 100%;
   padding: 18px 16px 16px;
   border-radius: 22px;
   background: var(--pz-card);
   box-shadow: var(--pz-shadow);
   border: 2px solid #ffd1e8;
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;   
 
 }
 
@@ -577,8 +584,12 @@
   box-shadow: inset 0 2px 12px rgba(255, 182, 193, .35);
   
   /* เพิ่มเพื่อจัดกึ่งกลาง */
-  margin: 10px auto 12px; /* auto ทำให้กึ่งกลางแนวนอน */
-  justify-content: center; /* เผื่อความกว้างน้อยกว่า container */
+  margin-inline: auto;
+  justify-content: center;
+}
+
+@supports (-webkit-touch-callout: none) {
+  #puzzlePage{ width: 100vw; }           /* กันบีบกว้างจนดูชิดขวา */
 }
 
 
@@ -1824,7 +1835,7 @@ function loadPuzzleGame() {
     <div class="puzzle-card" id="pCard">
       <div class="puzzle-head">
         <h1 class="puzzle-title">เกมจิ๊กซอว์เรียงภาพ</h1>
-        <p class="puzzle-sub">แตะชิ้นที่ 1 แล้วแตะชิ้นที่ 2 เพื่อสลับตำแหน่ง<br>ให้ถูกต้องทั้ง 9 ช่อง (แตะอีกครั้งเพื่อยืนยัน)</p>
+        <p class="puzzle-sub">แตะชิ้นที่ 1 แล้วแตะชิ้นที่ 2 เพื่อสลับตำแหน่ง<br>ให้ถูกต้องทั้ง 9 ช่อง (แตะ 2 ครั้ง เพื่อยืนยัน)</p>
         <div class="puzzle-chips"><span class="chip">ง่ายสุดสูด~💗</span></div>
       </div>
 
@@ -1881,48 +1892,83 @@ function loadPuzzleGame() {
   pieces.forEach(p => pGrid.appendChild(p));
 
   // === โหมด “แตะ/คลิกเพื่อสลับ” (event delegation) ===
-  let first = null;
+  // ====== เลือก/สลับแบบแตะ และยืนยันด้วย double-click/double-tap ======
+let first = null;
 
-  function clearPick() {
-    if (first) {
-      first.classList.remove('pz-selected');
-      first.setAttribute('aria-pressed', 'false');
-      first = null;
-    }
+function clearPick() {
+  if (first) {
+    first.classList.remove('pz-selected');
+    first.setAttribute('aria-pressed', 'false');
+    first = null;
+  }
+}
+
+// คลิกธรรมดา: เลือกชิ้นแรก หรือสลับกับชิ้นที่สอง
+pGrid.addEventListener('click', (e) => {
+  const el = e.target.closest('img.puzzle-piece');
+  if (!el || !pGrid.contains(el)) return;
+
+  // ยังไม่มีตัวแรก → เลือกและโชว์กรอบชมพู
+  if (!first) {
+    first = el;
+    el.classList.add('pz-selected');
+    el.setAttribute('aria-pressed', 'true');
+    return;
   }
 
-  pGrid.addEventListener('click', (e) => {
-    const el = e.target.closest('img.puzzle-piece');
-    if (!el || !pGrid.contains(el)) return;
+  // ถ้าคลิกชิ้นเดิมครั้งที่สอง (single click) → รอเผื่อ double-click แทน
+  if (first === el) {
+    return; // ไม่ล้างกรอบใน single click
+  }
 
-    // เลือกชิ้นแรก
-    if (!first) {
-      first = el;
-      el.classList.add('pz-selected');
-      el.setAttribute('aria-pressed', 'true');
-      return;
-    }
+  // คลิกชิ้นที่สองที่ต่างกัน → สลับแล้วล้างกรอบ
+  swapDomNodes(first, el);
+  clearPick();
+});
 
-    // แตะชิ้นเดิม = ยกเลิก
-    if (first === el) {
-      clearPick();
-      return;
-    }
+// ดับเบิลคลิกเมาส์: ใช้ยืนยันตำแหน่งแล้วลบกรอบชมพู
+pGrid.addEventListener('dblclick', (e) => {
+  const el = e.target.closest('img.puzzle-piece');
+  if (!el) return;
+  if (first === el) clearPick();
+});
 
-    // สลับตำแหน่ง
-    swapDomNodes(first, el);
-    clearPick();     // เคลียร์ไฮไลต์หลังสลับ
-  });
+// ดับเบิลแทป (มือถือ/ทัช): ยืนยันตำแหน่งแล้วลบกรอบชมพู
+const DOUBLE_MS = 300;
+let lastTapEl = null;
+let lastTapAt = 0;
 
-  // กดคีย์บอร์ด (Enter/Space = เลือก/สลับ)
-  pGrid.addEventListener('keydown', (e) => {
-    const el = e.target.closest('img.puzzle-piece');
-    if (!el) return;
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      el.click();   // ใช้ลอจิกเดียวกับคลิก
-    }
-  });
+pGrid.addEventListener('touchend', (e) => {
+  const el = e.target.closest('img.puzzle-piece');
+  if (!el) return;
+
+  const now = Date.now();
+  if (lastTapEl === el && (now - lastTapAt) <= DOUBLE_MS) {
+    // double-tap ยืนยันตำแหน่ง
+    e.preventDefault();
+    if (first === el) clearPick();
+    lastTapEl = null;
+    lastTapAt = 0;
+  } else {
+    lastTapEl = el;
+    lastTapAt = now;
+  }
+}, { passive: false });
+
+// เข้าถึงด้วยคีย์บอร์ด: Enter/Space = เลือกหรือสลับ, Shift+Enter = ยืนยัน/ลบกรอบ
+pGrid.addEventListener('keydown', (e) => {
+  const el = e.target.closest('img.puzzle-piece');
+  if (!el) return;
+
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    el.click();               // ใช้ลอจิกเดียวกับ click
+  } else if (e.key === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    if (first === el) clearPick();
+  }
+});
+
 
   // ปุ่ม: สับใหม่
   document.getElementById("btnShuffle").addEventListener("click", () => {
@@ -2652,13 +2698,6 @@ if (saveBtn) saveBtn.addEventListener('click', saveCardAsImage);
   const btnClose = document.querySelector('#giftCardPopup .btn-ghost');
   if (btnClose) btnClose.onclick = window.closeGiftCard;
 })();
-
-  const sub = document.querySelector('.puzzle-sub');
-if (sub) {
-  sub.textContent = isTouchLike()
-    ? 'แตะชิ้นที่ 1 แล้วแตะชิ้นที่ 2 เพื่อสลับ ให้ถูกต้องทั้ง 9 ช่อง'
-    : 'กดค้างเพื่อลาก/วาง ชิ้นส่วนให้ถูกต้องทั้ง 9 ช่อง';
-}
 
 
 // ===== Ultra-low-latency UI click sound (Web Audio) =====
