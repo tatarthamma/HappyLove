@@ -94,15 +94,7 @@
   margin-bottom: 16px;
 }
 
-#puzzlePage{
-  display: grid !important;
-  place-items: center;                   /* กลางทั้งสองแกน */
-  width: 100%;
-  min-height: 100vh;                     /* รองรับ Safari เก่า */
-  min-height: 100dvh;                    /* มือถือรุ่นใหม่ */
-  padding: 16px;
-  box-sizing: border-box;
-}
+#puzzlePage { width: 100%; }
 
 
 
@@ -534,14 +526,15 @@
 
 .puzzle-card{
   position: relative;
-  max-width: 420px;
+  max-width: min(95vw, 420px);
   width: 100%;
   padding: 18px 16px 16px;
   border-radius: 22px;
   background: var(--pz-card);
   box-shadow: var(--pz-shadow);
   border: 2px solid #ffd1e8;
-  margin-inline: auto;   
+  margin-left: auto;
+  margin-right: auto;
 
 }
 
@@ -584,12 +577,8 @@
   box-shadow: inset 0 2px 12px rgba(255, 182, 193, .35);
   
   /* เพิ่มเพื่อจัดกึ่งกลาง */
-  margin-inline: auto;
-  justify-content: center;
-}
-
-@supports (-webkit-touch-callout: none) {
-  #puzzlePage{ width: 100vw; }           /* กันบีบกว้างจนดูชิดขวา */
+  margin: 10px auto 12px; /* auto ทำให้กึ่งกลางแนวนอน */
+  justify-content: center; /* เผื่อความกว้างน้อยกว่า container */
 }
 
 
@@ -617,8 +606,6 @@
 
 
 .puzzle-piece{
-  -webkit-user-drag: none;    /* กัน iOS ลากรูปเป็นไฟล์ */
-  touch-action: none;
   width: 100%; height: 100%;
   object-fit: cover;
   border-radius: 12px;
@@ -629,11 +616,6 @@
   transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
   background: #fff;
 }
-.pz-selected{
-  outline: 4px solid #ff66b2;
-  outline-offset: -4px;
-  box-shadow: 0 0 0 4px rgba(255,102,178,.25) inset;
-}
 .puzzle-piece:active{ cursor: grabbing; }
 .puzzle-piece:hover{
   transform: translateY(-2px) scale(1.02);
@@ -642,8 +624,6 @@
     inset 0 2px 6px rgba(255,255,255,.9);
   filter: saturate(1.05);
 }
-.puzzle-piece:focus { outline: 4px solid #ff66b2; outline-offset: -4px; }
-
 
 .puzzle-actions{
   display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
@@ -658,12 +638,6 @@
   transition: transform .15s ease, box-shadow .2s ease;
 }
 .btn-cute:hover{ transform: translateY(-1px) scale(1.02); box-shadow: 0 10px 22px rgba(255,102,178,.45); }
-.btn-disabled, .btn-cute:disabled {
-  opacity: .5;
-  pointer-events: none;
-  filter: grayscale(.2);
-}
-
 .btn-ghost{
   background: #fff;
   color: #a80062;
@@ -737,17 +711,6 @@
 @media (max-width: 640px){
   .gift-grid-3{ grid-template-columns: repeat(3, 1fr); gap: 12px; }
 }
-  /* ใช้เฉพาะอุปกรณ์ pointer แบบหยาบ (มือถือ/แท็บเล็ต) */
-@media (pointer: coarse){
-  .puzzle-grid img{
-    -webkit-user-drag: none;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-    touch-action: none;
-  }
-}
-
 
 .gift-card{
   position: relative;
@@ -1314,7 +1277,6 @@
   text-shadow: 0 2px 0 rgba(255,255,255,.9);
   font-size: 2.4rem;              /* อ่านง่ายบนมือถือ */
   letter-spacing: .3px;
-  position: relative;
 }
 
 /* เส้นริบบิ้นใต้หัวข้อแถวล่าง */
@@ -1453,8 +1415,25 @@
   </style>
 </head>
 <body>
-    <div class="hero-card" id="mainPage">
-  <img src="assets/images/hero.jpg" alt="My Love" class="photo hero-photo" />
+    <div class="hero-card"id="mainPage">
+  <img
+  id="heroPhoto"
+  src="https://i.postimg.cc/brZ9s3Bh/S-7790595.jpg"
+  alt="My Love"
+  class="photo hero-photo"
+  width="200" height="200"
+  decoding="async"
+  fetchpriority="high"
+  referrerpolicy="no-referrer"
+  onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,\
+  <svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22>\
+    <defs><radialGradient id=%22g%22 cx=%2250%25%22 cy=%2250%25%22 r=%2275%25%22>\
+      <stop offset=%220%25%22 stop-color=%22%23fff0f6%22/><stop offset=%22100%25%22 stop-color=%22%23ffd6e7%22/>\
+    </radialGradient></defs>\
+    <rect width=%22200%22 height=%22200%22 fill=%22url(%23g)%22/>\
+    <text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%23cc0077%22 font-family=%22Mitr,Sarabun,sans-serif%22 font-size=%2214%22>Image not found</text>\
+  </svg>';"
+/>
 
     
     <h1 class="hero-title">Happy Birthday</h1>
@@ -1643,13 +1622,13 @@
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
 
-let isMusicPlaying = false;
+let isMusicPlaying = true;
 const toggleMusicBtn = document.getElementById("toggleMusicBtn");
 
 toggleMusicBtn.addEventListener("click", async () => {
   if (isMusicPlaying) {
     bgMusic.pause();
-    toggleMusicBtn.textContent = "🔇"; // เริ่มแบบเงียบ
+    toggleMusicBtn.textContent = "🔇";
   } else {
     try { await bgMusic.play(); toggleMusicBtn.textContent = "🔈"; } catch(e) {}
   }
@@ -1821,45 +1800,53 @@ function startMemoryPuzzle() {
 
   const PREVIEW_MAX = 2; // กดได้สูงสุด 3 ครั้งต่อเกม
 
-  function isTouchLike() {
-  return (window.matchMedia?.('(pointer: coarse)').matches) ||
-         ('ontouchstart' in window) ||
-         (navigator.maxTouchPoints > 0);
-}
-
   // ✅ Memory Puzzle
-  // ✅ Memory Puzzle: tap/click-to-swap only (no drag & drop)
-function loadPuzzleGame() {
-  // UI
+  function loadPuzzleGame() {
+  // โครง UI น่ารัก
   puzzlePage.innerHTML = `
     <div class="puzzle-card" id="pCard">
       <div class="puzzle-head">
         <h1 class="puzzle-title">เกมจิ๊กซอว์เรียงภาพ</h1>
-        <p class="puzzle-sub">แตะชิ้นที่ 1 แล้วแตะชิ้นที่ 2 เพื่อสลับตำแหน่ง<br>ให้ถูกต้องทั้ง 9 ช่อง (แตะ 2 ครั้ง เพื่อยืนยัน)</p>
-        <div class="puzzle-chips"><span class="chip">ง่ายสุดสูด~💗</span></div>
+        <p class="puzzle-sub">กดค้างเพื่อลาก/วาง ชิ้นส่วนให้ถูกต้องทั้ง 9 ช่อง</p>
+        <div class="puzzle-chips">
+          <span class="chip">ง่ายสุดสูด~💗</span>
+        </div>
       </div>
 
       <div class="puzzle-grid" id="pGrid"></div>
 
       <div class="puzzle-actions">
-        <button id="btnShuffle" class="btn-cute btn-ghost">🔀</button>
-        <button id="btnCheck" class="btn-cute">ตรวจคำตอบ</button>
-        <button id="btnPreview" class="btn-cute btn-ghost">💡(${PREVIEW_MAX})</button>
+        <br><button id="btnShuffle" class="btn-cute btn-ghost">🔀</button><br>
+        <br><button id="btnCheck" class="btn-cute">ตรวจคำตอบ</button><br>
+        <br><button id="btnPreview" class="btn-cute btn-ghost">💡(${PREVIEW_MAX})</button><br>
       </div>
 
       <p id="pzStatus" class="puzzle-status"></p>
     </div>
   `;
 
-  const pGrid   = document.getElementById("pGrid");
-  const pCard   = document.getElementById("pCard");
-  const status  = document.getElementById("pzStatus");
+  const pGrid = document.getElementById("pGrid");
+  const pCard = document.getElementById("pCard");
+  const status = document.getElementById("pzStatus");
   const btnPreview = document.getElementById("btnPreview");
 
-  // ห้ามคลิกขวา/ลากรูปเป็นไฟล์
-  pGrid.addEventListener("contextmenu", e => e.preventDefault());
+  // กันคลิกขวา/กดค้างเปิดเมนู
+pGrid.addEventListener("contextmenu", e => e.preventDefault());
 
-  // สร้างชิ้นภาพ (ตั้ง draggable=false เสมอ)
+// กัน long-press บนมือถือเปิดลิงก์รูป
+pGrid.addEventListener("touchstart", e => {
+  if (e.target && e.target.tagName === "IMG") {
+    e.preventDefault(); // ไม่ให้เกิด native behavior ของรูป
+  }
+}, { passive: false });
+
+// บางเครื่องมี gesturestart
+pGrid.addEventListener("gesturestart", e => e.preventDefault());
+
+
+  let previewCount = 0;
+
+  // สร้างชิ้นภาพ
   const imageUrls = [
     "https://i.postimg.cc/RCg7K4Cw/image1x1.png",
     "https://i.postimg.cc/k5w4zMpc/image2x1.png",
@@ -1876,14 +1863,9 @@ function loadPuzzleGame() {
     const img = document.createElement("img");
     img.src = url;
     img.className = "puzzle-piece";
-    img.setAttribute("draggable", "false");   // ❌ no drag
-    img.dataset.correctIndex = index;
-    img.setAttribute("data-label", index + 1);
-    img.tabIndex = 0;                          // รองรับคีย์บอร์ด
-    img.setAttribute("role", "button");
-    img.setAttribute("aria-pressed", "false");
-    // กันเบราเซอร์บางตัวลากรูป
-    img.addEventListener("dragstart", e => e.preventDefault(), { passive:false });
+    img.setAttribute("draggable", true);
+    img.dataset.correctIndex = index;     // เอาไว้อ้างอิง
+    img.setAttribute("data-label", index+1); // ใช้โชว์เลขช่วยจำ
     return img;
   });
 
@@ -1891,84 +1873,8 @@ function loadPuzzleGame() {
   shuffleArray(pieces);
   pieces.forEach(p => pGrid.appendChild(p));
 
-  // === โหมด “แตะ/คลิกเพื่อสลับ” (event delegation) ===
-  // ====== เลือก/สลับแบบแตะ และยืนยันด้วย double-click/double-tap ======
-let first = null;
-
-function clearPick() {
-  if (first) {
-    first.classList.remove('pz-selected');
-    first.setAttribute('aria-pressed', 'false');
-    first = null;
-  }
-}
-
-// คลิกธรรมดา: เลือกชิ้นแรก หรือสลับกับชิ้นที่สอง
-pGrid.addEventListener('click', (e) => {
-  const el = e.target.closest('img.puzzle-piece');
-  if (!el || !pGrid.contains(el)) return;
-
-  // ยังไม่มีตัวแรก → เลือกและโชว์กรอบชมพู
-  if (!first) {
-    first = el;
-    el.classList.add('pz-selected');
-    el.setAttribute('aria-pressed', 'true');
-    return;
-  }
-
-  // ถ้าคลิกชิ้นเดิมครั้งที่สอง (single click) → รอเผื่อ double-click แทน
-  if (first === el) {
-    return; // ไม่ล้างกรอบใน single click
-  }
-
-  // คลิกชิ้นที่สองที่ต่างกัน → สลับแล้วล้างกรอบ
-  swapDomNodes(first, el);
-  clearPick();
-});
-
-// ดับเบิลคลิกเมาส์: ใช้ยืนยันตำแหน่งแล้วลบกรอบชมพู
-pGrid.addEventListener('dblclick', (e) => {
-  const el = e.target.closest('img.puzzle-piece');
-  if (!el) return;
-  if (first === el) clearPick();
-});
-
-// ดับเบิลแทป (มือถือ/ทัช): ยืนยันตำแหน่งแล้วลบกรอบชมพู
-const DOUBLE_MS = 300;
-let lastTapEl = null;
-let lastTapAt = 0;
-
-pGrid.addEventListener('touchend', (e) => {
-  const el = e.target.closest('img.puzzle-piece');
-  if (!el) return;
-
-  const now = Date.now();
-  if (lastTapEl === el && (now - lastTapAt) <= DOUBLE_MS) {
-    // double-tap ยืนยันตำแหน่ง
-    e.preventDefault();
-    if (first === el) clearPick();
-    lastTapEl = null;
-    lastTapAt = 0;
-  } else {
-    lastTapEl = el;
-    lastTapAt = now;
-  }
-}, { passive: false });
-
-// เข้าถึงด้วยคีย์บอร์ด: Enter/Space = เลือกหรือสลับ, Shift+Enter = ยืนยัน/ลบกรอบ
-pGrid.addEventListener('keydown', (e) => {
-  const el = e.target.closest('img.puzzle-piece');
-  if (!el) return;
-
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    el.click();               // ใช้ลอจิกเดียวกับ click
-  } else if (e.key === 'Enter' && e.shiftKey) {
-    e.preventDefault();
-    if (first === el) clearPick();
-  }
-});
-
+  // เปิด Drag & Drop
+  enableDragAndDrop(pGrid);
 
   // ปุ่ม: สับใหม่
   document.getElementById("btnShuffle").addEventListener("click", () => {
@@ -1976,29 +1882,39 @@ pGrid.addEventListener('keydown', (e) => {
     shuffleArray(all);
     all.forEach(n => pGrid.appendChild(n));
     status.textContent = "สลับใหม่แล้ว ลองอีกทีน๊า~ ✨";
-    pCard.classList.remove("shake", "celebrate");
-    clearPick();
+    pCard.classList.remove("shake","celebrate");
+
+    // ▼ ถ้าต้องการรีเซ็ตโควตาเมื่อสับใหม่ ให้ uncomment 3 บรรทัดนี้
+    // previewCount = 0;
+    // btnPreview.disabled = false;
+    // btnPreview.textContent = `ดูตัวอย่าง 🖼 (เหลือ ${PREVIEW_MAX})`;
   });
 
-  // ปุ่ม: ดูตัวอย่าง (เหมือนเดิม)
-  let previewCount = 0;
+  // ปุ่ม: ดูตัวอย่างภาพ (จำกัดจำนวนครั้ง)
   btnPreview.addEventListener("click", () => {
     if (previewCount >= PREVIEW_MAX) {
+      // แจ้งเตือนเบา ๆ ว่าเต็มแล้ว
       status.textContent = "ครบจำนวนครั้งดูตัวอย่างแล้วน้า ✨";
-      btnPreview.animate([
-        { transform: 'translateX(0)' },
-        { transform: 'translateX(-4px)' },
-        { transform: 'translateX(4px)' },
-        { transform: 'translateX(0)' }
-      ], { duration: 250, easing: 'ease-out' });
+      wiggle(btnPreview);
       return;
     }
+
     previewCount++;
     const left = PREVIEW_MAX - previewCount;
-    btnPreview.textContent = `💡 (${left})`;
-    if (left === 0) btnPreview.disabled = true;
-    openPreviewOverlay();
+    btnPreview.textContent = left > 0
+      ? `💡 ( ${left})`
+      : "💡 (0)";
+
+    // ถ้าหมดโควตา → ปิดปุ่ม
+    if (left === 0) {
+      btnPreview.disabled = true;
+      btnPreview.classList.add("btn-disabled");
+    }
+
+    openPreviewOverlay(); // ฟังก์ชันเปิดภาพตัวอย่าง (อยู่ด้านล่าง)
   });
+
+
 
   // ปุ่ม: ตรวจคำตอบ
   document.getElementById("btnCheck").addEventListener("click", () => {
@@ -2008,12 +1924,13 @@ pGrid.addEventListener('keydown', (e) => {
       "image1x2.png","image2x2.png","image3x2.png",
       "image1x3.png","image2x3.png","image3x3.png"
     ];
-    const ok = current.every((v, i) => v === correct[i]);
+    const isCorrect = current.every((v,i) => v === correct[i]);
 
-    if (ok) {
+    if (isCorrect) {
       status.textContent = "เย่! เรียงถูกต้องแล้ว 💕";
       pCard.classList.remove("shake");
       pCard.classList.add("celebrate");
+      // โชว์ popup สำเร็จเดิมของคุณ
       showSuccessPopup();
     } else {
       status.textContent = "ยังไม่ถูกน๊า~ ลองอีกครั้ง 🧸";
@@ -2029,67 +1946,41 @@ pGrid.addEventListener('keydown', (e) => {
 }
 
 
-// สลับ DOM โดยไม่ต้อง clone (รักษาโหนด/ลิสต์เนอร์ที่อยู่บน container)
-function swapNodes(a, b){
-  const aPlaceholder = document.createElement('span');
-  const bPlaceholder = document.createElement('span');
-  a.replaceWith(aPlaceholder);
-  b.replaceWith(bPlaceholder);
-  aPlaceholder.replaceWith(b);
-  bPlaceholder.replaceWith(a);
+function enableDragAndDrop(puzzleContainer) {
+  let draggedItem = null;
+
+  function openGiftVideo() {
+  document.getElementById("popupSuccess").style.display = "none";
+  window.open("https://www.canva.com/design/DAGvrphMl34/w44lPAbAlAfqbjG5A33Qzw/watch?utm_content=DAGvrphMl34&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h332c25f8d2", "_blank"); // ← ใส่ลิงก์วิดีโอจริง
 }
 
-  // แตะชิ้นแรกให้ติดกรอบชมพู แล้วแตะชิ้นที่สองเพื่อ "สลับตำแหน่ง"
-function enableTouchSwap(puzzleContainer){
-  // ตรวจว่ามี touch ไหม (กันไม่ให้ทับพฤติกรรมบนเดสก์ท็อป)
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (!isTouch) return;
 
-  let first = null;
-
-  // ผูก listener ให้ภาพทุกชิ้น (ใช้ passive:false เพื่อให้ e.preventDefault() ได้บน iOS)
-  puzzleContainer.querySelectorAll('.puzzle-piece').forEach(tile => {
-    tile.addEventListener('touchstart', onTouchStart, { passive:false });
+  puzzleContainer.addEventListener("dragstart", (e) => {
+    if (e.target.tagName === "IMG") {
+      draggedItem = e.target;
+      e.dataTransfer.effectAllowed = "move";
+    }
   });
 
-  // เวลาโดมมีการแทนที่ node (จากการลากแบบเดสก์ท็อป) ให้ผูกใหม่อีกรอบ
-  // เรียก enableTouchSwap(puzzleContainer) หลังจาก drop แล้ว (ดูข้อ 2)
-  function onTouchStart(e){
-    e.preventDefault(); // กัน iOS เปิดเมนู/ลากรูป/เลื่อนหน้า
-    const tile = e.currentTarget;
-
-    if (!first){
-      first = tile;
-      tile.classList.add('pz-selected');
-      return;
+  puzzleContainer.addEventListener("dragover", (e) => {
+    if (e.target.tagName === "IMG") {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
     }
+  });
 
-    // แตะตัวเดิมเพื่อยกเลิก
-    if (first === tile){
-      tile.classList.remove('pz-selected');
-      first = null;
-      return;
+  puzzleContainer.addEventListener("drop", (e) => {
+    if (e.target.tagName === "IMG" && draggedItem && draggedItem !== e.target) {
+      const draggedClone = draggedItem.cloneNode(true);
+      const targetClone = e.target.cloneNode(true);
+
+      puzzleContainer.replaceChild(draggedClone, e.target);
+      puzzleContainer.replaceChild(targetClone, draggedItem);
+
+      enableDragAndDrop(puzzleContainer); // re-enable after replacement
     }
-
-    // สลับ DOM แล้วเคลียร์สถานะ
-    swapDomNodes(first, tile);
-    first.classList.remove('pz-selected');
-    first = null;
-  }
+  });
 }
-
-// สลับตำแหน่ง node A <-> B ใน DOM แบบไม่พังลำดับ
-function swapDomNodes(a, b){
-  const parent = a.parentNode;
-  if (!parent || parent !== b.parentNode) return; // ต้องอยู่ใน grid เดียวกัน
-
-  const placeholder = document.createElement('div');
-  parent.insertBefore(placeholder, a); // [placeholder][a]...
-  parent.replaceChild(a, b);           // b ถูกย้ายไปตำแหน่ง a เดิม
-  parent.replaceChild(b, placeholder); // a ถูกย้ายไปตำแหน่ง b เดิม
-  parent.removeChild(placeholder);
-}
-
 
 
     // ตั้งค่าตรงนี้ได้
@@ -2698,7 +2589,6 @@ if (saveBtn) saveBtn.addEventListener('click', saveCardAsImage);
   const btnClose = document.querySelector('#giftCardPopup .btn-ghost');
   if (btnClose) btnClose.onclick = window.closeGiftCard;
 })();
-
 
 // ===== Ultra-low-latency UI click sound (Web Audio) =====
 let audioCtx;
