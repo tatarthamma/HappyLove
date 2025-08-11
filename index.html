@@ -606,6 +606,8 @@
 
 
 .puzzle-piece{
+  -webkit-user-drag: none;    /* กัน iOS ลากรูปเป็นไฟล์ */
+  touch-action: none;
   width: 100%; height: 100%;
   object-fit: cover;
   border-radius: 12px;
@@ -615,6 +617,11 @@
   cursor: grab;
   transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
   background: #fff;
+}
+.pz-selected{
+  outline: 4px solid #ff66b2;
+  outline-offset: -4px;
+  box-shadow: 0 0 0 4px rgba(255,102,178,.25) inset;
 }
 .puzzle-piece:active{ cursor: grabbing; }
 .puzzle-piece:hover{
@@ -1858,6 +1865,7 @@ pGrid.addEventListener("gesturestart", e => e.preventDefault());
 
   // เปิด Drag & Drop
   enableDragAndDrop(pGrid);
+  enableTouchSwap(pGrid);
 
   // ปุ่ม: สับใหม่
   document.getElementById("btnShuffle").addEventListener("click", () => {
@@ -1961,9 +1969,63 @@ function enableDragAndDrop(puzzleContainer) {
       puzzleContainer.replaceChild(targetClone, draggedItem);
 
       enableDragAndDrop(puzzleContainer); // re-enable after replacement
+      enableTouchSwap(puzzleContainer);  // << re-bind สำหรับ iOS ด้วย
+      enableTouchSwap(pGrid);            // << เผื่อกรณี listener หลุด
     }
   });
 }
+
+  // แตะชิ้นแรกให้ติดกรอบชมพู แล้วแตะชิ้นที่สองเพื่อ "สลับตำแหน่ง"
+function enableTouchSwap(puzzleContainer){
+  // ตรวจว่ามี touch ไหม (กันไม่ให้ทับพฤติกรรมบนเดสก์ท็อป)
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  if (!isTouch) return;
+
+  let first = null;
+
+  // ผูก listener ให้ภาพทุกชิ้น (ใช้ passive:false เพื่อให้ e.preventDefault() ได้บน iOS)
+  puzzleContainer.querySelectorAll('.puzzle-piece').forEach(tile => {
+    tile.addEventListener('touchstart', onTouchStart, { passive:false });
+  });
+
+  // เวลาโดมมีการแทนที่ node (จากการลากแบบเดสก์ท็อป) ให้ผูกใหม่อีกรอบ
+  // เรียก enableTouchSwap(puzzleContainer) หลังจาก drop แล้ว (ดูข้อ 2)
+  function onTouchStart(e){
+    e.preventDefault(); // กัน iOS เปิดเมนู/ลากรูป/เลื่อนหน้า
+    const tile = e.currentTarget;
+
+    if (!first){
+      first = tile;
+      tile.classList.add('pz-selected');
+      return;
+    }
+
+    // แตะตัวเดิมเพื่อยกเลิก
+    if (first === tile){
+      tile.classList.remove('pz-selected');
+      first = null;
+      return;
+    }
+
+    // สลับ DOM แล้วเคลียร์สถานะ
+    swapDomNodes(first, tile);
+    first.classList.remove('pz-selected');
+    first = null;
+  }
+}
+
+// สลับตำแหน่ง node A <-> B ใน DOM แบบไม่พังลำดับ
+function swapDomNodes(a, b){
+  const parent = a.parentNode;
+  if (!parent || parent !== b.parentNode) return; // ต้องอยู่ใน grid เดียวกัน
+
+  const placeholder = document.createElement('div');
+  parent.insertBefore(placeholder, a); // [placeholder][a]...
+  parent.replaceChild(a, b);           // b ถูกย้ายไปตำแหน่ง a เดิม
+  parent.replaceChild(b, placeholder); // a ถูกย้ายไปตำแหน่ง b เดิม
+  parent.removeChild(placeholder);
+}
+
 
 
     // ตั้งค่าตรงนี้ได้
@@ -2637,3 +2699,4 @@ document.addEventListener('mousedown', unlockAndPrimeOnce, true);
 
 </body>
 </html>
+
