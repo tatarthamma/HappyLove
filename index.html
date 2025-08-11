@@ -631,6 +631,8 @@
     inset 0 2px 6px rgba(255,255,255,.9);
   filter: saturate(1.05);
 }
+.puzzle-piece:focus { outline: 4px solid #ff66b2; outline-offset: -4px; }
+
 
 .puzzle-actions{
   display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
@@ -645,6 +647,12 @@
   transition: transform .15s ease, box-shadow .2s ease;
 }
 .btn-cute:hover{ transform: translateY(-1px) scale(1.02); box-shadow: 0 10px 22px rgba(255,102,178,.45); }
+.btn-disabled, .btn-cute:disabled {
+  opacity: .5;
+  pointer-events: none;
+  filter: grayscale(.2);
+}
+
 .btn-ghost{
   background: #fff;
   color: #a80062;
@@ -1808,67 +1816,39 @@ function startMemoryPuzzle() {
          (navigator.maxTouchPoints > 0);
 }
 
-  
-
-  function enableNativeDnDOnce(container){
-  if (container.dataset.hasDnd === '1') return;
-  container.dataset.hasDnd = '1';
-  enableDragAndDrop(container); // ← ใช้ฟังก์ชัน drag&drop เดิมของคุณได้เลย
-}
-  function enableTouchSwapOnce(container){
-  if (container.dataset.hasTouchSwap === '1') return;
-  container.dataset.hasTouchSwap = '1';
-  enableTouchSwapTouch(container);
-}
-  
-
   // ✅ Memory Puzzle
-  function loadPuzzleGame() {
-  // โครง UI น่ารัก
+  // ✅ Memory Puzzle: tap/click-to-swap only (no drag & drop)
+function loadPuzzleGame() {
+  // UI
   puzzlePage.innerHTML = `
     <div class="puzzle-card" id="pCard">
       <div class="puzzle-head">
         <h1 class="puzzle-title">เกมจิ๊กซอว์เรียงภาพ</h1>
-        <p class="puzzle-sub">กดค้างเพื่อลาก/วาง ชิ้นส่วนให้ถูกต้องทั้ง 9 ช่อง</p>
-        <div class="puzzle-chips">
-          <span class="chip">ง่ายสุดสูด~💗</span>
-        </div>
+        <p class="puzzle-sub">แตะชิ้นที่ 1 แล้วแตะชิ้นที่ 2 เพื่อสลับตำแหน่ง<br>ให้ถูกต้องทั้ง 9 ช่อง (แตะอีกครั้งเพื่อยืนยัน)</p>
+        <div class="puzzle-chips"><span class="chip">ง่ายสุดสูด~💗</span></div>
       </div>
 
       <div class="puzzle-grid" id="pGrid"></div>
 
       <div class="puzzle-actions">
-        <br><button id="btnShuffle" class="btn-cute btn-ghost">🔀</button><br>
-        <br><button id="btnCheck" class="btn-cute">ตรวจคำตอบ</button><br>
-        <br><button id="btnPreview" class="btn-cute btn-ghost">💡(${PREVIEW_MAX})</button><br>
+        <button id="btnShuffle" class="btn-cute btn-ghost">🔀</button>
+        <button id="btnCheck" class="btn-cute">ตรวจคำตอบ</button>
+        <button id="btnPreview" class="btn-cute btn-ghost">💡(${PREVIEW_MAX})</button>
       </div>
 
       <p id="pzStatus" class="puzzle-status"></p>
     </div>
   `;
 
-  const pGrid = document.getElementById("pGrid");
-  const pCard = document.getElementById("pCard");
-  const status = document.getElementById("pzStatus");
+  const pGrid   = document.getElementById("pGrid");
+  const pCard   = document.getElementById("pCard");
+  const status  = document.getElementById("pzStatus");
   const btnPreview = document.getElementById("btnPreview");
 
-  // กันคลิกขวา/กดค้างเปิดเมนู
-pGrid.addEventListener("contextmenu", e => e.preventDefault());
+  // ห้ามคลิกขวา/ลากรูปเป็นไฟล์
+  pGrid.addEventListener("contextmenu", e => e.preventDefault());
 
-// กัน long-press บนมือถือเปิดลิงก์รูป
-pGrid.addEventListener("touchstart", e => {
-  if (e.target && e.target.tagName === "IMG") {
-    e.preventDefault(); // ไม่ให้เกิด native behavior ของรูป
-  }
-}, { passive: false });
-
-// บางเครื่องมี gesturestart
-pGrid.addEventListener("gesturestart", e => e.preventDefault());
-
-
-  let previewCount = 0;
-
-  // สร้างชิ้นภาพ
+  // สร้างชิ้นภาพ (ตั้ง draggable=false เสมอ)
   const imageUrls = [
     "https://i.postimg.cc/RCg7K4Cw/image1x1.png",
     "https://i.postimg.cc/k5w4zMpc/image2x1.png",
@@ -1885,9 +1865,14 @@ pGrid.addEventListener("gesturestart", e => e.preventDefault());
     const img = document.createElement("img");
     img.src = url;
     img.className = "puzzle-piece";
-    img.setAttribute("draggable", true);
-    img.dataset.correctIndex = index;     // เอาไว้อ้างอิง
-    img.setAttribute("data-label", index+1); // ใช้โชว์เลขช่วยจำ
+    img.setAttribute("draggable", "false");   // ❌ no drag
+    img.dataset.correctIndex = index;
+    img.setAttribute("data-label", index + 1);
+    img.tabIndex = 0;                          // รองรับคีย์บอร์ด
+    img.setAttribute("role", "button");
+    img.setAttribute("aria-pressed", "false");
+    // กันเบราเซอร์บางตัวลากรูป
+    img.addEventListener("dragstart", e => e.preventDefault(), { passive:false });
     return img;
   });
 
@@ -1895,59 +1880,79 @@ pGrid.addEventListener("gesturestart", e => e.preventDefault());
   shuffleArray(pieces);
   pieces.forEach(p => pGrid.appendChild(p));
 
-  // เลือกโหมดแบบมีเงื่อนไข
-bindPuzzleInteractions(pGrid);
+  // === โหมด “แตะ/คลิกเพื่อสลับ” (event delegation) ===
+  let first = null;
 
-// …และในปุ่มสับใหม่ ให้เรียกย้ำเพื่อผูกตามโหมดปัจจุบันทุกครั้ง
-document.getElementById("btnShuffle").addEventListener("click", () => {
-  const all = [...pGrid.children];
-  shuffleArray(all);
-  all.forEach(n => pGrid.appendChild(n));
-  status.textContent = "สลับใหม่แล้ว ลองอีกทีน๊า~ ✨";
-  pCard.classList.remove("shake","celebrate");
-  bindPuzzleInteractions(pGrid);   // ⬅ สำคัญ
-});
-    function bindPuzzleInteractions(container) {
-  const touch = isTouchLike();
-
-  // ตั้งค่า draggable เฉพาะตามโหมด
-  container.querySelectorAll('img').forEach(img => {
-    img.draggable = !touch;  // touch=false → ปิด drag; desktop=true → เปิด drag
-  });
-
-  if (touch) {
-    enableTouchSwapOnce(container);
-  } else {
-    enableNativeDnDOnce(container); // ใช้ drag&drop เดิมบนเดสก์ท็อป
+  function clearPick() {
+    if (first) {
+      first.classList.remove('pz-selected');
+      first.setAttribute('aria-pressed', 'false');
+      first = null;
+    }
   }
-}
 
+  pGrid.addEventListener('click', (e) => {
+    const el = e.target.closest('img.puzzle-piece');
+    if (!el || !pGrid.contains(el)) return;
 
-  // ปุ่ม: ดูตัวอย่างภาพ (จำกัดจำนวนครั้ง)
-  btnPreview.addEventListener("click", () => {
-    if (previewCount >= PREVIEW_MAX) {
-      // แจ้งเตือนเบา ๆ ว่าเต็มแล้ว
-      status.textContent = "ครบจำนวนครั้งดูตัวอย่างแล้วน้า ✨";
-      wiggle(btnPreview);
+    // เลือกชิ้นแรก
+    if (!first) {
+      first = el;
+      el.classList.add('pz-selected');
+      el.setAttribute('aria-pressed', 'true');
       return;
     }
 
-    previewCount++;
-    const left = PREVIEW_MAX - previewCount;
-    btnPreview.textContent = left > 0
-      ? `💡 ( ${left})`
-      : "💡 (0)";
-
-    // ถ้าหมดโควตา → ปิดปุ่ม
-    if (left === 0) {
-      btnPreview.disabled = true;
-      btnPreview.classList.add("btn-disabled");
+    // แตะชิ้นเดิม = ยกเลิก
+    if (first === el) {
+      clearPick();
+      return;
     }
 
-    openPreviewOverlay(); // ฟังก์ชันเปิดภาพตัวอย่าง (อยู่ด้านล่าง)
+    // สลับตำแหน่ง
+    swapDomNodes(first, el);
+    clearPick();     // เคลียร์ไฮไลต์หลังสลับ
   });
 
+  // กดคีย์บอร์ด (Enter/Space = เลือก/สลับ)
+  pGrid.addEventListener('keydown', (e) => {
+    const el = e.target.closest('img.puzzle-piece');
+    if (!el) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      el.click();   // ใช้ลอจิกเดียวกับคลิก
+    }
+  });
 
+  // ปุ่ม: สับใหม่
+  document.getElementById("btnShuffle").addEventListener("click", () => {
+    const all = [...pGrid.children];
+    shuffleArray(all);
+    all.forEach(n => pGrid.appendChild(n));
+    status.textContent = "สลับใหม่แล้ว ลองอีกทีน๊า~ ✨";
+    pCard.classList.remove("shake", "celebrate");
+    clearPick();
+  });
+
+  // ปุ่ม: ดูตัวอย่าง (เหมือนเดิม)
+  let previewCount = 0;
+  btnPreview.addEventListener("click", () => {
+    if (previewCount >= PREVIEW_MAX) {
+      status.textContent = "ครบจำนวนครั้งดูตัวอย่างแล้วน้า ✨";
+      btnPreview.animate([
+        { transform: 'translateX(0)' },
+        { transform: 'translateX(-4px)' },
+        { transform: 'translateX(4px)' },
+        { transform: 'translateX(0)' }
+      ], { duration: 250, easing: 'ease-out' });
+      return;
+    }
+    previewCount++;
+    const left = PREVIEW_MAX - previewCount;
+    btnPreview.textContent = `💡 (${left})`;
+    if (left === 0) btnPreview.disabled = true;
+    openPreviewOverlay();
+  });
 
   // ปุ่ม: ตรวจคำตอบ
   document.getElementById("btnCheck").addEventListener("click", () => {
@@ -1957,13 +1962,12 @@ document.getElementById("btnShuffle").addEventListener("click", () => {
       "image1x2.png","image2x2.png","image3x2.png",
       "image1x3.png","image2x3.png","image3x3.png"
     ];
-    const isCorrect = current.every((v,i) => v === correct[i]);
+    const ok = current.every((v, i) => v === correct[i]);
 
-    if (isCorrect) {
+    if (ok) {
       status.textContent = "เย่! เรียงถูกต้องแล้ว 💕";
       pCard.classList.remove("shake");
       pCard.classList.add("celebrate");
-      // โชว์ popup สำเร็จเดิมของคุณ
       showSuccessPopup();
     } else {
       status.textContent = "ยังไม่ถูกน๊า~ ลองอีกครั้ง 🧸";
@@ -1977,23 +1981,7 @@ document.getElementById("btnShuffle").addEventListener("click", () => {
   document.body.appendChild(puzzlePage);
   puzzlePage.style.display = "flex";
 }
-  function enableTouchSwapTouch(puzzleContainer){
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  if (!isTouch) return;
-  let first = null;
-  puzzleContainer.querySelectorAll('.puzzle-piece').forEach(tile => {
-    tile.addEventListener('touchstart', onTouchStart, {passive:false});
-  });
-  function onTouchStart(e){
-    e.preventDefault();
-    const tile = e.currentTarget;
-    if (!first){ first = tile; tile.classList.add('pz-selected'); return; }
-    if (first === tile){ tile.classList.remove('pz-selected'); first = null; return; }
-    swapDomNodes(first, tile);
-    first.classList.remove('pz-selected');
-    first = null;
-  }
-}
+
 
 // สลับ DOM โดยไม่ต้อง clone (รักษาโหนด/ลิสต์เนอร์ที่อยู่บน container)
 function swapNodes(a, b){
@@ -2003,40 +1991,6 @@ function swapNodes(a, b){
   b.replaceWith(bPlaceholder);
   aPlaceholder.replaceWith(b);
   bPlaceholder.replaceWith(a);
-}
-
-
-
-function enableDragAndDrop(puzzleContainer) {
-  let draggedItem = null;
-
-  function openGiftVideo() {
-  document.getElementById("popupSuccess").style.display = "none";
-  window.open("https://www.canva.com/design/DAGvrphMl34/w44lPAbAlAfqbjG5A33Qzw/watch?utm_content=DAGvrphMl34&utm_campaign=designshare&utm_medium=link2&utm_source=uniquelinks&utlId=h332c25f8d2", "_blank"); // ← ใส่ลิงก์วิดีโอจริง
-}
-
-
-  puzzleContainer.addEventListener("dragstart", (e) => {
-    if (e.target.tagName === "IMG") {
-      draggedItem = e.target;
-      e.dataTransfer.effectAllowed = "move";
-    }
-  });
-
-  puzzleContainer.addEventListener("dragover", (e) => {
-    if (e.target.tagName === "IMG") {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-    }
-  });
-
-  puzzleContainer.addEventListener("drop", (e) => {
-    if (e.target.tagName === "IMG" && draggedItem && draggedItem !== e.target) {
-      swapDomNodes(draggedItem, e.target);
-  draggedItem = null;
-
-    }
-  });
 }
 
   // แตะชิ้นแรกให้ติดกรอบชมพู แล้วแตะชิ้นที่สองเพื่อ "สลับตำแหน่ง"
@@ -2771,6 +2725,3 @@ document.addEventListener('mousedown', unlockAndPrimeOnce, true);
 
 </body>
 </html>
-
-
-
