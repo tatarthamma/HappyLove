@@ -20,7 +20,11 @@
 }
 
     body{
-  background-image: url("./assets/images/hero.jpg");
+  background:
+    radial-gradient(18rem 14rem at 82% 30%, rgba(255,204,230,.22), transparent 65%),
+    radial-gradient(20rem 16rem at 50% 85%, rgba(255,204,230,.20), transparent 70%),
+    #fff0f6; /* สีพื้น fallback */
+  background-image: url("https://i.postimg.cc/jdrhsQ4G/Chat-GPT-Image-28-2568-16-05-20.png");
   background-size: cover;
   background-repeat: no-repeat;
   background-position: center;
@@ -1412,17 +1416,7 @@
 </head>
 <body>
     <div class="hero-card"id="mainPage">
-  <img
-  id="heroPhoto"
-  src="https://i.postimg.cc/brZ9s3Bh/S-7790595.jpg"
-  alt="My Love"
-  class="photo hero-photo"
-  width="200" height="200"
-  decoding="async"
-  fetchpriority="high"
-  referrerpolicy="no-referrer"
-  onerror="this.onerror=null; this.src='data:image/svg+xml;utf8,\
-  <img src="./assets/images/hero.jpg" alt="My Love" class="photo hero-photo" />
+  <img src="assets/images/hero.jpg" alt="My Love" class="photo hero-photo" />
 
     
     <h1 class="hero-title">Happy Birthday</h1>
@@ -2643,4 +2637,3 @@ document.addEventListener('mousedown', unlockAndPrimeOnce, true);
 
 </body>
 </html>
-
