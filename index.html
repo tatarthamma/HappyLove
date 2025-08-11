@@ -1565,8 +1565,8 @@
   <div id="finalGame" class="center" style="display:none;">
   <div class="final-card" aria-labelledby="finalTitle">
     <div class="final-head">
-      <h1 id="finalTitle" class="final-title">เลือกกล่องของขวัญสุดพิเศษ</h1>
-      <p class="final-sub">แต่ละกล่องมีเซอร์ไพรส์ไม่เหมือนกัน ตั้งใจเลือกน๊า~ </p>
+      <h1 id="finalTitle" class="final-title">เลือกกล่องของขวัญ<br>สุดพิเศษ</h1>
+      <p class="final-sub">แต่ละกล่องมีเซอร์ไพรส์ไม่เหมือนกัน <br>ตั้งใจเลือกน๊า~ </p>
       <div class="final-chips">
         <span class="chip">จะได้ไหมน๊า มาลุ้นกัน💗</span>
       </div>
@@ -1679,6 +1679,12 @@
   const bgMusic = new Audio("https://www.bensound.com/bensound-music/bensound-love.mp3"); // 🔁 เปลี่ยน URL ได้
 bgMusic.loop = true;
 bgMusic.volume = 0.5;
+
+const HBD_URL = "./assets/images/hbd.mp3";   // ← เปลี่ยนเป็นพาธไฟล์ของคุณ
+const birthdayMusic = new Audio(HBD_URL);
+birthdayMusic.loop = true;            // อยากให้เล่นวนก็ true (จะปิดก็ได้)
+birthdayMusic.preload = "auto";
+birthdayMusic.volume = 0.0;           // เริ่มที่ 0 เพื่อเฟดอินนุ่มๆ
 
 let isMusicPlaying = true;
 const toggleMusicBtn = document.getElementById("toggleMusicBtn");
@@ -2311,6 +2317,41 @@ function initFinalGameUI(){
   });
 }
 
+async function fadeOutAudio(audio, ms = 0) {
+  if (!audio) return;
+  const steps = 12;
+  const startVol = audio.volume ?? 1;
+  // ถ้ายังไม่เล่นก็ไม่ต้องทำอะไร
+  try { if (audio.paused) return; } catch(_) {}
+
+  for (let i = steps; i >= 0; i--) {
+    audio.volume = (startVol * i) / steps;
+    await new Promise(r => setTimeout(r, ms / steps));
+  }
+  try { audio.pause(); } catch(_) {}
+  // รีเซ็ต
+  try { audio.currentTime = 0; } catch(_) {}
+  audio.volume = startVol;
+
+  // อัปเดตสถานะปุ่ม/ตัวแปรให้สอดคล้อง
+  if (typeof isMusicPlaying !== 'undefined') isMusicPlaying = false;
+  const btn = document.getElementById('toggleMusicBtn');
+  if (btn) btn.textContent = '🔇';
+}
+
+async function fadeInAudio(audio, targetVol = 0.5, ms = 100) {
+  if (!audio) return;
+  try { if (audio.paused) await audio.play(); } catch(_) {}
+  const steps = 12;
+  audio.volume = 0.0;
+  for (let i = 1; i <= steps; i++) {
+    audio.volume = (targetVol * i) / steps;
+    await new Promise(r => setTimeout(r, ms / steps));
+  }
+}
+
+
+
 // เรียกทันทีเมื่อเข้า final game (แทรกหลังบรรทัดที่คุณทำ display:flex)
 function goToFinalGame(){
   document.getElementById("popupSuccess").classList.add("hidden");
@@ -2470,12 +2511,16 @@ function closeGiftCard(){
   stopCelebrationLoop(); // หยุดลูปเมื่อปิด
 }
 
-function revealGift() {
-  // ปิด popup ชั้นแรก
+    // === revealGift (เวอร์ชันท้ายสุดที่ใช้งานจริง) ===
+async function revealGift() {
+  // 1) ปิดเพลงพื้นหลังด้วยการเฟดเอาต์
+  await fadeOutAudio(bgMusic, 800);
+
+  // 2) ซ่อน popup ชั้นแรก + หยุดสปาร์กเคิล
   document.getElementById("giftBoxPopup").classList.add("hidden");
   stopGiftBoxSparkles && stopGiftBoxSparkles();
 
-  // ตั้งค่ากิฟต์
+  // 3) ตั้งค่ากิฟต์
   const gif = giftData[selectedGiftIndex].gif;
   const msg = giftData[selectedGiftIndex].message;
 
@@ -2483,20 +2528,29 @@ function revealGift() {
   gifEl.setAttribute('crossorigin','anonymous');
   gifEl.src = gif;
 
-  // 🔽 ตั้งหัวข้อย่อย: "ของขวัญชิ้นพิเศษ" (คงที่) + "คือ …" (เปลี่ยนตามกล่อง)
-  const subValueByBox = ["คือ… เลี้ยงหมูกระทะ/ชาบู", "คือ… นาฬิกาสุดโปรด", "คือ… กระเป๋าตามใจ"]; // เปลี่ยนเป็นข้อความที่ต้องการได้เลย
+  const subValueByBox = [
+    "คือ… เลี้ยงหมูกระทะ/ชาบู",
+    "คือ… นาฬิกาสุดโปรด",
+    "คือ… กระเป๋าตามใจ"
+  ];
   const sub = document.getElementById("giftSubTitle");
-  sub.innerHTML = `
-    <span class="sub-value">${subValueByBox[selectedGiftIndex] || "คือ …"}</span>
-  `;
+  sub.innerHTML = `<span class="sub-value">${subValueByBox[selectedGiftIndex] || "คือ …"}</span>`;
 
   document.getElementById("giftMessage").innerText = msg;
 
-  // แสดงการ์ด + เอฟเฟกต์
+  // 4) เปิดเพลงสุขสันต์วันเกิด (เฟดอินนุ่มๆ)
+  try {
+    await fadeInAudio(birthdayMusic, 0.55, 900);   // ปรับเป้าหมาย/เวลาได้
+    if (typeof isMusicPlaying !== 'undefined') isMusicPlaying = true;
+    const btn = document.getElementById('toggleMusicBtn');
+    if (btn) btn.textContent = '🔈';
+  } catch (_) { /* เงียบไว้ ถ้าเบราว์เซอร์บล็อกก็ไม่ล้ม */ }
+
+  // 5) เปิดการ์ด + ตั้ง QR
   showGiftCard();
   setGiftQR(VIDEO_URL);
-
 }
+
 
 
 
@@ -2615,6 +2669,10 @@ if (saveBtn) saveBtn.addEventListener('click', saveCardAsImage);
   function returnToHome() {
     // ซ่อนป๊อปอัป/หน้าต่าง ๆ เผื่อค้าง
     const ids = ["giftCardPopup", "giftBoxPopup", "popupSuccess", "letterPopup"];
+    try { birthdayMusic.pause(); birthdayMusic.currentTime = 0; } catch(_) {}
+// จะให้กลับไปเปิดเพลงพื้นหลังต่อก็ทำเพิ่มได้:
+// try { bgMusic.currentTime = 0; await bgMusic.play(); } catch(_) {}
+
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (el) el.classList.add("hidden");
